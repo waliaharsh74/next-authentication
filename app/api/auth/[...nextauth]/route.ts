@@ -1,6 +1,10 @@
 import NextAuth from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
+import prisma from '@/app/lib/prismadb'
+import bcrypt from 'bcrypt'
+import { SignupFormSchema } from "@/app/lib/definations";
+
 const handler = NextAuth({
     providers: [
         CredentialsProvider({
@@ -14,14 +18,22 @@ const handler = NextAuth({
                 email: { label: "Email", type: "text", placeholder: "smith@example.com" },
                 password: { label: "Password", type: "password" }
             },
-            async authorize(credentials, req) {
+            async authorize(credentials) {
                 // Add logic here to look up the user from the credentials supplied
                 const email = credentials?.email
                 const password = credentials?.password
+                const validatedFields = SignupFormSchema.safeParse({
 
-                const user = { id: "1", name: "J Smith", email: "jsmith@example.com" }
+                    email: email,
+                    password: password
+                })
+                if (!validatedFields.success) {
+                    null
+                }
 
-                if (user.email === email) {
+                const user = await prisma?.user.findFirst({ where: { email } })
+
+                if (user && user && password && await bcrypt.compare(password, user.password)) {
                     // Any object returned will be saved in `user` property of the JWT
                     return user
                 } else {
